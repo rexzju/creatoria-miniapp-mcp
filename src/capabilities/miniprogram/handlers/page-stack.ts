@@ -4,6 +4,7 @@
 
 import type { SessionState } from '../../../types.js'
 import { withTimeout, getTimeout, DEFAULT_TIMEOUTS } from '../../../runtime/timeout/timeout.js'
+import { withSessionLock } from '../../../runtime/concurrency/mutex.js'
 
 /**
  * PageStack result
@@ -18,6 +19,11 @@ export interface PageStackResult {
  * Get current page stack
  */
 export async function getPageStack(session: SessionState): Promise<PageStackResult> {
+  // Serialize against all other SDK operations on this session (shared single WebSocket).
+  return withSessionLock(session.sessionId, () => getPageStackImpl(session))
+}
+
+async function getPageStackImpl(session: SessionState): Promise<PageStackResult> {
   const logger = session.logger
 
   try {

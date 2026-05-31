@@ -51,6 +51,7 @@ test-miniapp/
 memory.json
 .mcp.json
 .claude/
+.claude-handoff/
 .workflow/
 
 # Session logs

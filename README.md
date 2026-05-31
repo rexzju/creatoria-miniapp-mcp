@@ -271,6 +271,31 @@ All async operations are protected with configurable timeouts to prevent hanging
 | Element queries | 10s |
 | Wait operations | 30s |
 
+### Configuring Timeouts
+
+All timeouts are configurable via `.mcp.json` (values in milliseconds):
+
+| Config field | Default | Scope |
+|--------------|---------|-------|
+| `timeout` | 30000 (30s) | Global default (navigation, wait, etc.) |
+| `evaluateTimeout` | 5000 (5s) | `evaluate` / wx API calls |
+| `launchTimeout` | 60000 (60s) | `miniprogram_launch` |
+| `connectTimeout` | 30000 (30s) | `miniprogram_connect` |
+| `screenshotTimeout` | 10000 (10s) | Screenshot capture (fullPage base timeout also derives from this) |
+
+```json
+{
+  "projectPath": "/path/to/miniprogram",
+  "timeout": 30000,
+  "evaluateTimeout": 5000,
+  "launchTimeout": 60000,
+  "connectTimeout": 30000,
+  "screenshotTimeout": 10000
+}
+```
+
+See [Toolchain Version Baseline & Timeout Configuration](./docs/current/04-toolchain-version-baseline.md) for tuning guidance.
+
 ### Retry Mechanism
 
 Transient errors are automatically retried with configurable strategies:
@@ -282,9 +307,14 @@ Transient errors are automatically retried with configurable strategies:
 
 - **Node.js**: >= 18.0.0
 - **WeChat DevTools**: [Download](https://developers.weixin.qq.com/miniprogram/dev/devtools/download.html)
+  - Recommended: latest stable (v2.01.2510260 / 2025-10 or newer)
+  - Minimum for `auto` command: v1.05.2111232
   - Enable CLI/HTTP calls in Settings -> Security
   - Default automation port: 9420
+- **miniprogram-automator**: 0.12.1 (2023-11-07) — the official SDK is no longer actively maintained but remains functional
 - **Mini Program Project**: Any WeChat mini program with `project.config.json` or `app.json`
+
+See [Toolchain Version Baseline](./docs/current/04-toolchain-version-baseline.md) for full version and compatibility details.
 
 ## Examples
 

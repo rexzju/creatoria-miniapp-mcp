@@ -154,6 +154,9 @@ describe('Config Loader', () => {
       process.env.MCP_OUTPUT_DIR = '.env-output'
       process.env.MCP_TIMEOUT = '15000'
       process.env.MCP_SESSION_TIMEOUT = '600000'
+      process.env.MCP_LAUNCH_TIMEOUT = '90000'
+      process.env.MCP_CONNECT_TIMEOUT = '45000'
+      process.env.MCP_SCREENSHOT_TIMEOUT = '15000'
 
       const config = loadConfigFromEnv()
 
@@ -164,6 +167,9 @@ describe('Config Loader', () => {
       expect(config.outputDir).toBe('.env-output')
       expect(config.timeout).toBe(15000)
       expect(config.sessionTimeout).toBe(600000)
+      expect(config.launchTimeout).toBe(90000)
+      expect(config.connectTimeout).toBe(45000)
+      expect(config.screenshotTimeout).toBe(15000)
     })
 
     it('should return empty config if no env vars set', () => {
@@ -190,6 +196,14 @@ describe('Config Loader', () => {
 
       const config = loadConfigFromEnv()
       expect(config.capabilities).toEqual(['automator', 'page', 'element'])
+    })
+
+    it('should parse MCP_CONNECT_TIMEOUT from environment', () => {
+      process.env.MCP_CONNECT_TIMEOUT = '45000'
+
+      const config = loadConfigFromEnv()
+
+      expect(config.connectTimeout).toBe(45000)
     })
   })
 

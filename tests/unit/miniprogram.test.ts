@@ -394,4 +394,60 @@ describe('MiniProgram Tools', () => {
       )
     })
   })
+
+  describe('concurrency serialization (session lock)', () => {
+    it('serializes concurrent screenshots so the SDK is never called in parallel', async () => {
+      let inFlight = 0
+      let maxInFlight = 0
+      const sdkScreenshot = jest.fn().mockImplementation(async () => {
+        inFlight++
+        maxInFlight = Math.max(maxInFlight, inFlight)
+        await new Promise((r) => setTimeout(r, 10))
+        inFlight--
+        return Buffer.from('img')
+      })
+      mockSession.miniProgram = { screenshot: sdkScreenshot }
+
+      // Fire 8 screenshots concurrently
+      const results = await Promise.all(
+        Array.from({ length: 8 }, () =>
+          miniprogramTools.screenshot(mockSession, { returnBase64: true })
+        )
+      )
+
+      expect(results.every((r) => r.success)).toBe(true)
+      expect(sdkScreenshot).toHaveBeenCalledTimes(8)
+      // The key assertion: never more than one SDK call running at the same time.
+      expect(maxInFlight).toBe(1)
+    })
+
+    it('serializes screenshot against other SDK operations on the same session', async () => {
+      const order: string[] = []
+      let inFlight = 0
+      let maxInFlight = 0
+      const track = (label: string, ms: number) =>
+        jest.fn().mockImplementation(async () => {
+          inFlight++
+          maxInFlight = Math.max(maxInFlight, inFlight)
+          order.push(`start:${label}`)
+          await new Promise((r) => setTimeout(r, ms))
+          order.push(`end:${label}`)
+          inFlight--
+          return label === 'eval' ? 'evaluated' : Buffer.from('img')
+        })
+
+      mockSession.miniProgram = {
+        screenshot: track('shot', 15),
+        evaluate: track('eval', 5),
+      }
+
+      await Promise.all([
+        miniprogramTools.screenshot(mockSession, { returnBase64: true }),
+        miniprogramTools.evaluate(mockSession, { expression: '1+1' }),
+      ])
+
+      // screenshot and evaluate must not overlap on the shared WebSocket
+      expect(maxInFlight).toBe(1)
+    })
+  })
 })

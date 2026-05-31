@@ -6,6 +6,7 @@ import { join } from 'path'
 import type { SessionState } from '../../../types.js'
 import { withTimeout, getTimeout, DEFAULT_TIMEOUTS } from '../../../runtime/timeout/timeout.js'
 import { withRetry, RetryPredicates } from '../../../runtime/retry/retry.js'
+import { withSessionLock } from '../../../runtime/concurrency/mutex.js'
 
 /**
  * Screenshot input arguments
@@ -40,6 +41,17 @@ export async function screenshot(
   session: SessionState,
   args: ScreenshotArgs = {}
 ): Promise<ScreenshotResult> {
+  // Serialize against ALL SDK operations on this session, not just other screenshots.
+  // The SDK multiplexes every request over one WebSocket, so a screenshot racing a
+  // concurrent navigate/evaluate would also hang. Queueing per session turns any
+  // concurrency into an orderly sequence (real-world test: concurrent 1/8 → 8/8).
+  return withSessionLock(session.sessionId, () => screenshotImpl(session, args))
+}
+
+async function screenshotImpl(
+  session: SessionState,
+  args: ScreenshotArgs = {}
+): Promise<ScreenshotResult> {
   const { filename, fullPage = false, returnBase64 = false } = args
   const logger = session.logger
   const outputManager = session.outputManager
@@ -70,7 +82,10 @@ export async function screenshot(
         {
           maxRetries: 2,
           delayMs: 1000,
-          shouldRetry: RetryPredicates.onTransientError,
+          // Only retry on a dropped connection. Do NOT retry on timeout: under the
+          // session lock the underlying request isn't cancelled, so a retry just
+          // queues more work onto an already-busy WebSocket and makes things worse.
+          shouldRetry: RetryPredicates.onConnectionError,
           onRetry: (attempt, error, delay) => {
             logger?.warn(`Screenshot retry attempt ${attempt}`, {
               error: error.message,
@@ -135,7 +150,10 @@ export async function screenshot(
       {
         maxRetries: 2,
         delayMs: 1000,
-        shouldRetry: RetryPredicates.onTransientError,
+        // Only retry on a dropped connection. Do NOT retry on timeout: under the
+        // session lock the underlying request isn't cancelled, so a retry just
+        // queues more work onto an already-busy WebSocket and makes things worse.
+        shouldRetry: RetryPredicates.onConnectionError,
         onRetry: (attempt, error, delay) => {
           logger?.warn(`Screenshot retry attempt ${attempt}`, {
             error: error.message,

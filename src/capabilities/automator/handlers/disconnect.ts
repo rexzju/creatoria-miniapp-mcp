@@ -3,6 +3,7 @@
  */
 
 import type { SessionState } from '../../../types.js'
+import { withTimeout, DEFAULT_TIMEOUTS } from '../../../runtime/timeout/timeout.js'
 
 /**
  * Disconnect result
@@ -29,8 +30,14 @@ export async function disconnect(session: SessionState): Promise<DisconnectResul
 
     logger?.info('Disconnecting from miniprogram')
 
-    // Disconnect from miniprogram-automator
-    await session.miniProgram.disconnect()
+    // Disconnect from miniprogram-automator with timeout protection.
+    // The underlying ws close can hang if DevTools is unresponsive; the catch
+    // block below still clears session state on timeout.
+    await withTimeout(
+      session.miniProgram.disconnect(),
+      DEFAULT_TIMEOUTS.default,
+      'Disconnect from miniprogram'
+    )
 
     // Clear miniProgram reference but keep session
     session.miniProgram = undefined

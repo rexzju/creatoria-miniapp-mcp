@@ -12,6 +12,7 @@
 
 import type { SessionState } from '../../../types.js'
 import { withTimeout, getTimeout, DEFAULT_TIMEOUTS } from '../../../runtime/timeout/timeout.js'
+import { withSessionLock } from '../../../runtime/concurrency/mutex.js'
 
 /**
  * Evaluate input arguments
@@ -34,6 +35,11 @@ export interface EvaluateResult {
  * Evaluate JavaScript code in the mini program context
  */
 export async function evaluate(session: SessionState, args: EvaluateArgs): Promise<EvaluateResult> {
+  // Serialize against all other SDK operations on this session (shared single WebSocket).
+  return withSessionLock(session.sessionId, () => evaluateImpl(session, args))
+}
+
+async function evaluateImpl(session: SessionState, args: EvaluateArgs): Promise<EvaluateResult> {
   const { expression, args: evalArgs = [] } = args
   const logger = session.logger
 

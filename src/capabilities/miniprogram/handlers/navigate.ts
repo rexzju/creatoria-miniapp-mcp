@@ -4,6 +4,7 @@
 
 import type { SessionState } from '../../../types.js'
 import { withTimeout, getTimeout, DEFAULT_TIMEOUTS } from '../../../runtime/timeout/timeout.js'
+import { withSessionLock } from '../../../runtime/concurrency/mutex.js'
 
 /**
  * Navigate input arguments
@@ -28,6 +29,11 @@ export interface NavigateResult {
  * Supports: navigateTo, redirectTo, reLaunch, switchTab, navigateBack
  */
 export async function navigate(session: SessionState, args: NavigateArgs): Promise<NavigateResult> {
+  // Serialize against all other SDK operations on this session (shared single WebSocket).
+  return withSessionLock(session.sessionId, () => navigateImpl(session, args))
+}
+
+async function navigateImpl(session: SessionState, args: NavigateArgs): Promise<NavigateResult> {
   const { method, url, delta } = args
   const logger = session.logger
 

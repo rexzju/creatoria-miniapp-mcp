@@ -30,15 +30,16 @@ export async function withTimeout<T>(
     timeoutId = setTimeout(() => {
       reject(new Error(`${operation} timed out after ${timeoutMs}ms`))
     }, timeoutMs)
+    // Prevent the timer from keeping the Node.js process alive after timeout.
+    // Note: the underlying SDK promise cannot be aborted (no cancel API), but
+    // unref + clearTimeout removes our timer leak.
+    if (typeof timeoutId.unref === 'function') timeoutId.unref()
   })
 
   try {
-    const result = await Promise.race([promise, timeoutPromise])
+    return await Promise.race([promise, timeoutPromise])
+  } finally {
     clearTimeout(timeoutId!)
-    return result
-  } catch (error) {
-    clearTimeout(timeoutId!)
-    throw error
   }
 }
 

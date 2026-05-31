@@ -41,6 +41,11 @@ export const DEFAULT_EVALUATE_TIMEOUT = 5 * 1000
 export const DEFAULT_LAUNCH_TIMEOUT = 60 * 1000
 
 /**
+ * Default timeout for connect operations (30 seconds in milliseconds)
+ */
+export const DEFAULT_CONNECT_TIMEOUT = 30 * 1000
+
+/**
  * Default timeout for screenshot operations (10 seconds in milliseconds)
  */
 export const DEFAULT_SCREENSHOT_TIMEOUT = 10 * 1000
@@ -83,6 +88,9 @@ export const DEFAULT_SERVER_CONFIG: Required<ServerConfig> = {
   logFlushInterval: DEFAULT_LOG_FLUSH_INTERVAL,
   enableSessionReport: false, // F3: Session report generation (default: disabled)
   enableFailureSnapshot: false, // F2: Automatic failure snapshot capture (default: disabled)
+  launchTimeout: DEFAULT_LAUNCH_TIMEOUT,
+  connectTimeout: DEFAULT_CONNECT_TIMEOUT,
+  screenshotTimeout: DEFAULT_SCREENSHOT_TIMEOUT,
 }
 
 /**
@@ -95,6 +103,7 @@ export const DEFAULT_SESSION_CONFIG: Required<SessionConfig> = {
   timeout: DEFAULT_TIMEOUT,
   evaluateTimeout: DEFAULT_EVALUATE_TIMEOUT,
   launchTimeout: DEFAULT_LAUNCH_TIMEOUT,
+  connectTimeout: DEFAULT_CONNECT_TIMEOUT,
   screenshotTimeout: DEFAULT_SCREENSHOT_TIMEOUT,
 }
 

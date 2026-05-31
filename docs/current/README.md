@@ -222,5 +222,8 @@ Week 2-3: 架构迁移 (18-25h)
 
 - [01-architecture-migration.md](./01-architecture-migration.md) - 架构迁移详细计划
 - [02-screenshot-timeout-fix.md](./02-screenshot-timeout-fix.md) - 截图修复详细方案
+- [03-connect-screenshot-timeout-diagnosis.md](./03-connect-screenshot-timeout-diagnosis.md) - 连接与截图超时问题诊断
+- [04-toolchain-version-baseline.md](./04-toolchain-version-baseline.md) - 工具链版本基线与超时配置说明
+- [../../调研中/微信小程序工具链最新版本调研/README.md](../../调研中/微信小程序工具链最新版本调研/README.md) - SDK/CLI/开发者工具版本调研
 - [../directory-structure-and-code-style-best-practices.md](../directory-structure-and-code-style-best-practices.md) - 代码规范
 - [../migration/](../migration/) - 历史迁移文档

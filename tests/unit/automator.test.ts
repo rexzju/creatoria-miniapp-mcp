@@ -61,6 +61,7 @@ describe('Automator Tools', () => {
         projectPath: '/path/to/project',
         cliPath: '/path/to/cli',
         port: 9420,
+        timeout: 60000,
       })
     })
 
@@ -80,8 +81,20 @@ describe('Automator Tools', () => {
         projectPath: '/path/to/project',
         cliPath: '/Applications/wechatwebdevtools.app/Contents/MacOS/cli',
         port: 9420,
+        timeout: 60000,
       })
     })
+
+    it('should time out instead of hanging forever when SDK launch never responds', async () => {
+      // Simulate SDK launch hanging in waitUntil (ws never resolves)
+      ;(automator.launch as jest.Mock).mockReturnValue(new Promise(() => {}))
+
+      mockSession.config = { launchTimeout: 200 }
+
+      await expect(
+        automatorTools.launch(mockSession, { projectPath: '/path/to/project' })
+      ).rejects.toThrow(/timed out/i)
+    }, 5000)
 
     it('should disconnect existing connection before launching', async () => {
       const oldMiniProgram = {
@@ -148,7 +161,7 @@ describe('Automator Tools', () => {
       expect(mockSession.miniProgram).toBe(mockMiniProgram)
       expect(mockSession.config?.port).toBe(9420)
       expect(automator.connect).toHaveBeenCalledWith({
-        wsEndpoint: 'ws://localhost:9420',
+        wsEndpoint: 'ws://127.0.0.1:9420',
       })
     })
 
@@ -161,9 +174,18 @@ describe('Automator Tools', () => {
       expect(result.success).toBe(true)
       expect(result.port).toBeUndefined()
       expect(automator.connect).toHaveBeenCalledWith({
-        wsEndpoint: undefined,
+        wsEndpoint: 'ws://127.0.0.1:9420',
       })
     })
+
+    it('should time out instead of hanging forever when SDK never responds', async () => {
+      // Simulate SDK Connection.create hanging on `new ws()` (port open, no response)
+      ;(automator.connect as jest.Mock).mockReturnValue(new Promise(() => {}))
+
+      mockSession.config = { connectTimeout: 200 }
+
+      await expect(automatorTools.connect(mockSession, { port: 9420 })).rejects.toThrow(/timed out/i)
+    }, 5000)
 
     it('should disconnect existing connection before connecting', async () => {
       const oldMiniProgram = {

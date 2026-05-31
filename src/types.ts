@@ -22,6 +22,9 @@ export interface ServerConfig {
   logFlushInterval?: number // Log flush interval in ms (default: 5000)
   enableSessionReport?: boolean // Enable session report generation (default: false)
   enableFailureSnapshot?: boolean // Enable automatic failure snapshot capture (F2 feature, default: false)
+  launchTimeout?: number // Timeout for launch operations in ms (default: 60000)
+  connectTimeout?: number // Timeout for connect operations in ms (default: 30000)
+  screenshotTimeout?: number // Timeout for screenshot operations in ms (default: 10000)
 }
 
 /**
@@ -61,6 +64,8 @@ export interface SessionConfig {
   evaluateTimeout?: number
   /** Timeout for launch operations (ms). Defaults to 60000 (60s) */
   launchTimeout?: number
+  /** Timeout for connect operations (ms). Defaults to 30000 (30s) */
+  connectTimeout?: number
   /** Timeout for screenshot operations (ms). Defaults to 10000 (10s) */
   screenshotTimeout?: number
 }

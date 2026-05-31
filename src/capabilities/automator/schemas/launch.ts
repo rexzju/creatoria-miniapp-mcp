@@ -17,6 +17,12 @@ export const automatorLaunchSchema = z
       .max(65535)
       .optional()
       .describe('Automation port for WeChat DevTools'),
+    reuseExisting: z
+      .boolean()
+      .optional()
+      .describe(
+        'Reuse a DevTools already listening on the port via connect (~10ms) instead of spawning a new instance (~13s). Defaults to true. Note: when reusing, the running instance may host a different project than projectPath. Set false to force a fresh launch.'
+      ),
   })
   .describe('Launch WeChat Mini Program with automator')
 

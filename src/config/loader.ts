@@ -106,6 +106,9 @@ export function loadConfigFile(filePath: string): Partial<ServerConfig> {
  * - MCP_OUTPUT_DIR
  * - MCP_TIMEOUT
  * - MCP_SESSION_TIMEOUT
+ * - MCP_LAUNCH_TIMEOUT
+ * - MCP_CONNECT_TIMEOUT
+ * - MCP_SCREENSHOT_TIMEOUT
  */
 export function loadConfigFromEnv(): Partial<ServerConfig> {
   const config: Partial<ServerConfig> = {}
@@ -144,6 +147,27 @@ export function loadConfigFromEnv(): Partial<ServerConfig> {
     const timeout = parseInt(process.env.MCP_SESSION_TIMEOUT, 10)
     if (!isNaN(timeout)) {
       config.sessionTimeout = timeout
+    }
+  }
+
+  if (process.env.MCP_LAUNCH_TIMEOUT) {
+    const timeout = parseInt(process.env.MCP_LAUNCH_TIMEOUT, 10)
+    if (!isNaN(timeout)) {
+      config.launchTimeout = timeout
+    }
+  }
+
+  if (process.env.MCP_CONNECT_TIMEOUT) {
+    const timeout = parseInt(process.env.MCP_CONNECT_TIMEOUT, 10)
+    if (!isNaN(timeout)) {
+      config.connectTimeout = timeout
+    }
+  }
+
+  if (process.env.MCP_SCREENSHOT_TIMEOUT) {
+    const timeout = parseInt(process.env.MCP_SCREENSHOT_TIMEOUT, 10)
+    if (!isNaN(timeout)) {
+      config.screenshotTimeout = timeout
     }
   }
 

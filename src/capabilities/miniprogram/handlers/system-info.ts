@@ -4,6 +4,7 @@
 
 import type { SessionState } from '../../../types.js'
 import { withTimeout, getTimeout, DEFAULT_TIMEOUTS } from '../../../runtime/timeout/timeout.js'
+import { withSessionLock } from '../../../runtime/concurrency/mutex.js'
 
 /**
  * SystemInfo result
@@ -18,6 +19,11 @@ export interface SystemInfoResult {
  * Get system information
  */
 export async function getSystemInfo(session: SessionState): Promise<SystemInfoResult> {
+  // Serialize against all other SDK operations on this session (shared single WebSocket).
+  return withSessionLock(session.sessionId, () => getSystemInfoImpl(session))
+}
+
+async function getSystemInfoImpl(session: SessionState): Promise<SystemInfoResult> {
   const logger = session.logger
 
   try {

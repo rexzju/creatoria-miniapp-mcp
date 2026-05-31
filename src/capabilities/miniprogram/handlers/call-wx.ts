@@ -4,6 +4,7 @@
 
 import type { SessionState } from '../../../types.js'
 import { withTimeout, getTimeout, DEFAULT_TIMEOUTS } from '../../../runtime/timeout/timeout.js'
+import { withSessionLock } from '../../../runtime/concurrency/mutex.js'
 
 /**
  * CallWx input arguments
@@ -26,6 +27,11 @@ export interface CallWxResult {
  * Call a WeChat API method (wx.*)
  */
 export async function callWx(session: SessionState, args: CallWxArgs): Promise<CallWxResult> {
+  // Serialize against all other SDK operations on this session (shared single WebSocket).
+  return withSessionLock(session.sessionId, () => callWxImpl(session, args))
+}
+
+async function callWxImpl(session: SessionState, args: CallWxArgs): Promise<CallWxResult> {
   const { method, args: wxArgs = [] } = args
   const logger = session.logger
 

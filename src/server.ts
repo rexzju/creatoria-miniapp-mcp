@@ -22,6 +22,13 @@ export async function startServer(config: Partial<ServerConfig> = {}): Promise<S
     logBufferSize,
     logFlushInterval,
     enableSessionReport,
+    projectPath,
+    cliPath,
+    port,
+    timeout,
+    launchTimeout,
+    connectTimeout,
+    screenshotTimeout,
   } = fullConfig
 
   // Generate unique session ID for this server instance
@@ -60,7 +67,8 @@ export async function startServer(config: Partial<ServerConfig> = {}): Promise<S
     capabilities,
     sessionId, // Pass the unique session ID
     getSession: (sid) => {
-      const session = sessionStore.getOrCreate(sid)
+      const sessionConfig = { projectPath, cliPath, port, timeout, launchTimeout, connectTimeout, screenshotTimeout }
+      const session = sessionStore.getOrCreate(sid, sessionConfig)
       sessionStore.updateActivity(sid)
       return session
     },
