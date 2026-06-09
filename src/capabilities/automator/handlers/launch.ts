@@ -76,18 +76,32 @@ export async function launch(session: SessionState, args: LaunchArgs): Promise<L
           'Automation port already listening, reusing via connect (fast path). The running instance may host a different project than the requested projectPath; pass reuseExisting=false to force a fresh launch.',
           { port, requestedProjectPath: projectPath }
         )
-        const miniProgram = await withTimeout(
-          automator.connect({ wsEndpoint: `ws://127.0.0.1:${port}` } as any),
-          connectTimeoutMs,
-          'Connect to existing DevTools'
-        )
-        session.miniProgram = miniProgram as any
-        session.config = { ...session.config, projectPath, cliPath, port }
-        logger?.info('MiniProgram connected via fast path', { port })
-        return {
-          success: true,
-          message: `Reused running DevTools on port ${port} (fast path, may host a different project than ${projectPath})`,
-          port,
+        try {
+          const miniProgram = await withTimeout(
+            automator.connect({ wsEndpoint: `ws://127.0.0.1:${port}` } as any),
+            connectTimeoutMs,
+            'Connect to existing DevTools'
+          )
+          session.miniProgram = miniProgram as any
+          session.config = { ...session.config, projectPath, cliPath, port }
+          logger?.info('MiniProgram connected via fast path', { port })
+          return {
+            success: true,
+            message: `Reused running DevTools on port ${port} (fast path, may host a different project than ${projectPath})`,
+            port,
+          }
+        } catch (connectError) {
+          // Port detected as listening but WS connect failed.
+          // Happens when DevTools was force-killed: port lingers in TIME_WAIT,
+          // probePort returns true but no WS endpoint responds.
+          // Fall through to full automator.launch() below.
+          logger?.warn('Fast path WS connect failed, falling through to full launch', {
+            error: connectError instanceof Error ? connectError.message : String(connectError),
+            port,
+          })
+          if (session.miniProgram) {
+            await disconnect(session).catch(() => {})
+          }
         }
       }
     }
@@ -98,12 +112,17 @@ export async function launch(session: SessionState, args: LaunchArgs): Promise<L
     // own budget. The outer withTimeout is the real guard against that.
     const timeoutMs = getTimeout(session.config?.launchTimeout, DEFAULT_TIMEOUTS.launch)
 
+    // GPU 加速控制
+    const disableGpu = session.config?.disableGpu !== false
+    const launchArgs = disableGpu ? ['--disable-gpu'] : []
+
     // Launch with outer timeout protection
     const miniProgram = await withTimeout(
       automator.launch({
         projectPath,
         cliPath,
         port,
+        args: launchArgs,
         timeout: timeoutMs,
       }),
       timeoutMs,
