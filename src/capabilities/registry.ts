@@ -149,14 +149,35 @@ export class ToolRegistry {
   }
 
   /**
-   * Convert Zod schema to JSON Schema for MCP Tool format
+   * Unwrap Zod wrapper types (ZodEffects, ZodOptional, ZodDefault, etc.)
+   * to reach the underlying type definition.
+   */
+  private unwrapZod(schema: any): any {
+    const typeName = schema?._def?.typeName
+    switch (typeName) {
+      case 'ZodEffects':  // .refine(), .transform(), .preprocess()
+        return this.unwrapZod(schema._def.schema)
+      case 'ZodOptional':
+        return this.unwrapZod(schema._def.innerType)
+      case 'ZodDefault':
+        return this.unwrapZod(schema._def.innerType)
+      default:
+        return schema
+    }
+  }
+
+  /**
+   * Convert Zod schema to JSON Schema for MCP Tool format.
+   *
+   * Walks Zod internals to extract shape/type information.  Wrapper types
+   * (ZodEffects via .refine/.preprocess, ZodOptional, ZodDefault) are
+   * transparently unwrapped first so the JSON Schema reflects the actual
+   * input shape the LLM client should produce.
    */
   private zodToJsonSchema(
     schema: ZodTypeAny
   ): { type: 'object'; properties: Record<string, unknown>; required?: string[] } {
-    // Use zod-to-json-schema or manual conversion
-    // For now, use the shape if available
-    const zodSchema = schema as any
+    const zodSchema = this.unwrapZod(schema) as any
 
     if (zodSchema._def?.typeName === 'ZodObject') {
       const shape = zodSchema._def.shape?.()
@@ -183,50 +204,51 @@ export class ToolRegistry {
   }
 
   /**
-   * Convert a single Zod field to JSON Schema
+   * Convert a single Zod field to JSON Schema.
+   *
+   * Handles ZodEffects (z.preprocess) and ZodOptional wrappers by
+   * unwrapping them before extracting the underlying type.
    */
   private zodFieldToJsonSchema(field: any): Record<string, unknown> {
-    const typeName = field._def?.typeName
+    const unwrapped = this.unwrapZod(field)
+    const typeName = unwrapped._def?.typeName
 
-    // Handle optional wrapper
-    if (typeName === 'ZodOptional') {
-      return this.zodFieldToJsonSchema(field._def.innerType)
-    }
+    // Extract description from the original field (may be on the wrapper)
+    const description = field._def?.description ?? unwrapped._def?.description
 
-    // Handle basic types
     switch (typeName) {
       case 'ZodString':
         return {
           type: 'string',
-          ...(field._def.description ? { description: field._def.description } : {}),
+          ...(description ? { description } : {}),
         }
       case 'ZodNumber':
         return {
           type: 'number',
-          ...(field._def.description ? { description: field._def.description } : {}),
+          ...(description ? { description } : {}),
         }
       case 'ZodBoolean':
         return {
           type: 'boolean',
-          ...(field._def.description ? { description: field._def.description } : {}),
+          ...(description ? { description } : {}),
         }
       case 'ZodArray':
         return {
           type: 'array',
-          items: this.zodFieldToJsonSchema(field._def.type),
-          ...(field._def.description ? { description: field._def.description } : {}),
+          items: this.zodFieldToJsonSchema(unwrapped._def.type),
+          ...(description ? { description } : {}),
         }
       case 'ZodEnum':
         return {
           type: 'string',
-          enum: field._def.values,
-          ...(field._def.description ? { description: field._def.description } : {}),
+          enum: unwrapped._def.values,
+          ...(description ? { description } : {}),
         }
       case 'ZodObject':
-        return this.zodToJsonSchema(field)
+        return this.zodToJsonSchema(unwrapped)
       default:
         // Default to any type
-        return { description: field._def?.description }
+        return { description }
     }
   }
 
