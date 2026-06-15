@@ -1,5 +1,6 @@
 /**
  * Screenshot schema - Take a screenshot of the mini program
+ * Always captures the full page content, stitching top and bottom if scrollable.
  */
 
 import { z } from 'zod'
@@ -10,19 +11,7 @@ export const screenshotSchema = z
       .string()
       .optional()
       .describe(
-        'Optional filename to save screenshot to file. If not provided and returnBase64=true, returns base64 string directly.'
-      ),
-    fullPage: z
-      .boolean()
-      .optional()
-      .describe(
-        'Whether to capture the full page including scroll area (default: false). Note: fullPage screenshots use longer timeout (30s vs 10s).'
-      ),
-    returnBase64: z
-      .boolean()
-      .optional()
-      .describe(
-        'Return screenshot as base64 string. If true and no filename provided, returns base64 directly without saving file. (default: false)'
+        'Optional filename to save screenshot to file. Auto-generated if not provided.'
       ),
   })
-  .describe('Take a screenshot of the mini program')
+  .describe('Take a full-page screenshot of the mini program')
