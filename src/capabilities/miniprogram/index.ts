@@ -13,6 +13,7 @@ import {
   screenshotSchema,
   pageStackSchema,
   systemInfoSchema,
+  healthSchema,
 } from './schemas/index.js'
 import {
   navigate,
@@ -21,6 +22,7 @@ import {
   screenshot,
   getPageStack,
   getSystemInfo,
+  getHealth,
 } from './handlers/index.js'
 
 // Re-export schemas for external use
@@ -58,7 +60,7 @@ const tools: ToolDefinition[] = [
   {
     name: 'miniprogram_screenshot',
     description:
-      'Take a screenshot of the mini program. Use returnBase64=true for quick base64 response, or provide filename to save to file.',
+      'Take a full-page screenshot of the mini program. Automatically captures scrollable content (scroll-view) into a single image. Provide filename to save to file, or leave blank for auto-generated name.',
     capability: 'miniprogram',
     inputSchema: screenshotSchema,
     handler: screenshot,
@@ -77,6 +79,14 @@ const tools: ToolDefinition[] = [
     inputSchema: systemInfoSchema,
     handler: getSystemInfo,
   },
+
+  {
+    name: 'miniprogram_health',
+    description: '全面的健康检查 — WS 连通性、登录状态、全链路（云函数→后端）、GPU 状态',
+    capability: 'miniprogram',
+    inputSchema: healthSchema,
+    handler: getHealth,
+  },
 ]
 
 /**
@@ -84,7 +94,7 @@ const tools: ToolDefinition[] = [
  */
 export const capability: CapabilityModule = {
   name: 'miniprogram',
-  description: 'Mini program-level operations (6 tools)',
+  description: 'Mini program-level operations (7 tools)',
   tools,
 }
 

@@ -87,7 +87,7 @@ export async function snapshotPage(session: SessionState, args: SnapshotPageArgs
     let screenshotPath: string | undefined
     if (includeScreenshot) {
       const screenshotFilename = snapshotFilename.replace('.json', '.png')
-      const screenshotResult = await screenshot(session, { filename: screenshotFilename, fullPage })
+      const screenshotResult = await screenshot(session, { filename: screenshotFilename })
       screenshotPath = screenshotResult.path
       logger?.info('Page screenshot saved', { path: screenshotPath })
     }
@@ -196,7 +196,7 @@ export async function snapshotFull(session: SessionState, args: SnapshotFullArgs
     let screenshotPath: string | undefined
     if (includeScreenshot) {
       const screenshotFilename = snapshotFilename.replace('.json', '.png')
-      const screenshotResult = await screenshot(session, { filename: screenshotFilename, fullPage })
+      const screenshotResult = await screenshot(session, { filename: screenshotFilename })
       screenshotPath = screenshotResult.path
       logger?.info('Application screenshot saved', { path: screenshotPath })
     }

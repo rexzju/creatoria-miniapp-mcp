@@ -160,11 +160,38 @@ export function registerCapabilitiesWithServer(
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error)
+
+      // 检测 WS 断开错误，附加友好提示
+      let friendlyHint = ''
+      if (/connection.*(closed|refused|reset)|ws.*(closed|disconnect|error)|not connected/i.test(errorMessage)) {
+        // 查询 ConnectionManager 重连状态（延迟导入避免循环依赖）
+        let reconnectState = 'degraded'
+        try {
+          const { getConnectionManager } = await import('../runtime/connection/index.js')
+          const rh = getConnectionManager().getReconnectHealth()
+          reconnectState = rh.state
+          if (rh.state === 'broken') {
+            friendlyHint =
+              `\n\n🚨 Daemon 自动重连已失败 ${rh.consecutive_failures} 次（状态: BROKEN），请人工介入！` +
+              `\n   最后错误: ${rh.last_error || 'unknown'}` +
+              `\n   持续失败: ${rh.failing_since_ms ? Math.floor(rh.failing_since_ms / 1000) + 's' : 'N/A'}` +
+              '\n   请执行 **setup_env** 或 **setup_all_env** 修复环境。'
+          }
+        } catch {
+          // 导入失败（非 server 模式），忽略
+        }
+        if (!friendlyHint) {
+          friendlyHint =
+            '\n\n💡 DevTools WebSocket 已断开。Daemon 的 ConnectionManager 正在自动重连（指数退避），请稍后重试。' +
+            '\n   若持续失败，请执行 setup_env 或 setup_all_env 修复环境。'
+        }
+      }
+
       return {
         content: [
           {
             type: 'text',
-            text: `Error executing tool ${name}: ${errorMessage}`,
+            text: `Error executing tool ${name}: ${errorMessage}${friendlyHint}`,
           },
         ],
         isError: true,
