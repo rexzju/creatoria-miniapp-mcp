@@ -90,6 +90,22 @@ function parseCLIArgs(): {
           i++
         }
         break
+
+      case '--http-port':
+        if (nextArg) {
+          const httpPort = parseInt(nextArg, 10)
+          if (!isNaN(httpPort)) {
+            cliConfig.httpPort = httpPort
+          }
+          i++
+        }
+        break
+      case '--disable-gpu':
+        cliConfig.disableGpu = true
+        break
+      case '--server':
+        cliConfig.server = true
+        break
       case '--help':
       case '-h':
         printHelp()
@@ -117,6 +133,9 @@ Options:
   --timeout <ms>              Global timeout in milliseconds (default: 30000)
   --session-timeout <ms>      Session timeout in milliseconds (default: 1800000)
   --config <path>             Path to config file
+  --http-port <number>        HTTP transport port (0=disable, default: 9421)
+  --disable-gpu               Disable GPU acceleration in DevTools (default: enabled)
+  --server                    Run in HTTP-only daemon mode (no stdio transport)
   --help, -h                  Show this help message
 
 Configuration Priority:
@@ -130,6 +149,9 @@ Environment Variables:
   MCP_OUTPUT_DIR             Output directory
   MCP_TIMEOUT                Timeout in milliseconds
   MCP_SESSION_TIMEOUT        Session timeout in milliseconds
+  MCP_HTTP_PORT               HTTP transport port (0=disable, default: 9421)
+  MCP_DISABLE_GPU             Disable GPU acceleration (true/false)
+  MCP_SERVER_MODE             Run in HTTP-only daemon mode (true/false)
 
 Config File:
   Searches for .mcp.json, mcp.config.json, or .mcp.config.json

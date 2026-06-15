@@ -50,6 +50,9 @@ export const DEFAULT_CONNECT_TIMEOUT = 30 * 1000
  */
 export const DEFAULT_SCREENSHOT_TIMEOUT = 10 * 1000
 
+export const DEFAULT_HTTP_PORT = 9421
+export const DEFAULT_DISABLE_GPU = true
+
 /**
  * Default capabilities (all tools enabled)
  */
@@ -91,6 +94,9 @@ export const DEFAULT_SERVER_CONFIG: Required<ServerConfig> = {
   launchTimeout: DEFAULT_LAUNCH_TIMEOUT,
   connectTimeout: DEFAULT_CONNECT_TIMEOUT,
   screenshotTimeout: DEFAULT_SCREENSHOT_TIMEOUT,
+  httpPort: DEFAULT_HTTP_PORT,
+  disableGpu: DEFAULT_DISABLE_GPU,
+  server: false,
 }
 
 /**
@@ -105,6 +111,8 @@ export const DEFAULT_SESSION_CONFIG: Required<SessionConfig> = {
   launchTimeout: DEFAULT_LAUNCH_TIMEOUT,
   connectTimeout: DEFAULT_CONNECT_TIMEOUT,
   screenshotTimeout: DEFAULT_SCREENSHOT_TIMEOUT,
+  httpPort: DEFAULT_HTTP_PORT,
+  disableGpu: DEFAULT_DISABLE_GPU,
 }
 
 /**

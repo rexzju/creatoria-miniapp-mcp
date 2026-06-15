@@ -25,6 +25,10 @@ export interface ServerConfig {
   launchTimeout?: number // Timeout for launch operations in ms (default: 60000)
   connectTimeout?: number // Timeout for connect operations in ms (default: 30000)
   screenshotTimeout?: number // Timeout for screenshot operations in ms (default: 10000)
+  httpPort?: number        // HTTP transport 监听端口 (0=禁用，默认 9421)
+  disableGpu?: boolean     // 启动 DevTools 时禁用 GPU 加速 (默认 true)
+  /** 以 HTTP-only daemon 模式运行（不启动 stdio transport） */
+  server?: boolean
 }
 
 /**
@@ -68,6 +72,8 @@ export interface SessionConfig {
   connectTimeout?: number
   /** Timeout for screenshot operations (ms). Defaults to 10000 (10s) */
   screenshotTimeout?: number
+  httpPort?: number        // HTTP transport 监听端口 (0=禁用，默认 9421)
+  disableGpu?: boolean     // 启动 DevTools 时禁用 GPU 加速 (默认 true)
 }
 
 export interface SessionMetrics {

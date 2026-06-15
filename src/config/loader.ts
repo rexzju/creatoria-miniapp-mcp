@@ -171,6 +171,19 @@ export function loadConfigFromEnv(): Partial<ServerConfig> {
     }
   }
 
+  if (process.env.MCP_HTTP_PORT) {
+    const httpPort = parseInt(process.env.MCP_HTTP_PORT, 10)
+    if (!isNaN(httpPort)) {
+      config.httpPort = httpPort
+    }
+  }
+  if (process.env.MCP_DISABLE_GPU) {
+    config.disableGpu = process.env.MCP_DISABLE_GPU === 'true'
+  }
+
+  if (process.env.MCP_SERVER_MODE) {
+    config.server = process.env.MCP_SERVER_MODE === 'true'
+  }
   return config
 }
 
