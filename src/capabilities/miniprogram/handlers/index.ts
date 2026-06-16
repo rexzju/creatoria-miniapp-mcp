@@ -16,3 +16,5 @@ export {
   cancelModal,
   type NativeModalResult,
 } from './native-modal.js'
+export { getLogs, type GetLogsArgs, type GetLogsResult } from './logs.js'
+export type { LogEntry } from './logs.js'

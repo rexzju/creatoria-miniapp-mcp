@@ -16,6 +16,7 @@ import {
   healthSchema,
   confirmModalSchema,
   cancelModalSchema,
+  logsSchema,
 } from './schemas/index.js'
 import {
   navigate,
@@ -27,6 +28,7 @@ import {
   getHealth,
   confirmModal,
   cancelModal,
+  getLogs,
 } from './handlers/index.js'
 
 // Re-export schemas for external use
@@ -64,7 +66,7 @@ const tools: ToolDefinition[] = [
   {
     name: 'miniprogram_screenshot',
     description:
-      'Take a full-page screenshot of the mini program. Automatically captures scrollable content (scroll-view) into a single image. Provide filename to save to file, or leave blank for auto-generated name.',
+      '截取小程序全页截图（自动拼接滚动内容为一张完整图片）。默认保存到小程序项目根目录的 ai_tmp/ 下，文件名自动生成。也可通过 filename 参数指定自定义文件名。',
     capability: 'miniprogram',
     inputSchema: screenshotSchema,
     handler: screenshot,
@@ -107,6 +109,14 @@ const tools: ToolDefinition[] = [
     inputSchema: cancelModalSchema,
     handler: cancelModal,
   },
+  {
+    name: 'miniprogram_get_logs',
+    description:
+      '读取小程序运行时日志（DevTools 模拟器自动落盘）。零参数调用返回最近 5 分钟的 error 日志。支持按时间范围、日志级别（log/info/warn/error）、关键字过滤。',
+    capability: 'miniprogram',
+    inputSchema: logsSchema,
+    handler: getLogs,
+  },
 ]
 
 /**
@@ -114,7 +124,7 @@ const tools: ToolDefinition[] = [
  */
 export const capability: CapabilityModule = {
   name: 'miniprogram',
-  description: 'Mini program-level operations (9 tools)',
+  description: 'Mini program-level operations (10 tools)',
   tools,
 }
 

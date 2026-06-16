@@ -5,6 +5,102 @@
 import * as miniprogramTools from '../../src/capabilities/miniprogram/handlers/index'
 import type { SessionState } from '../../src/types'
 
+// ---------------------------------------------------------------------------
+// getLogs mocks — must be at top level (jest.mock is hoisted above imports).
+// Use jest.fn() INSIDE the factory to avoid TDZ reference errors.
+// ---------------------------------------------------------------------------
+jest.mock('fs', () => ({
+  readFileSync: jest.fn(),
+  readdirSync: jest.fn(),
+  statSync: jest.fn(),
+  existsSync: jest.fn(),
+}))
+
+jest.mock('os', () => ({
+  homedir: jest.fn().mockReturnValue('/Users/testuser'),
+  platform: jest.fn().mockReturnValue('darwin'),
+}))
+
+// Get typed references to the mock functions via the mocked modules
+import { readFileSync as _readFileSync, readdirSync as _readdirSync, statSync as _statSync, existsSync as _existsSync } from 'fs'
+import { homedir as _homedir, platform as _platform } from 'os'
+
+const mockReadFileSync = _readFileSync as jest.Mock
+const mockReaddirSync = _readdirSync as jest.Mock
+const mockStatSync = _statSync as jest.Mock
+const mockExistsSync = _existsSync as jest.Mock
+const mockHomedir = _homedir as jest.Mock
+const mockPlatform = _platform as jest.Mock
+
+// Lazy import after mocks are in place
+let getLogs: typeof miniprogramTools.getLogs
+
+const MOCK_APPID = 'wxbe47560d0d5ea84f'
+const SAMPLE_LOG_CONTENT = [
+  '2026-6-16 11:55:6 [log] wx.getStorageSync api invoke',
+  '2026-6-16 11:55:6 [log] wx.request success callback with msg request:ok with seq 0',
+  '2026-6-16 11:55:6 [warn] Some warning message',
+  '2026-6-16 11:56:6 [error] TypeError: Cannot read property of undefined',
+  '2026-6-16 11:56:6 [ERROR] Uncaught promise rejection',
+].join('\n')
+
+function setupDefaultMocks() {
+  mockHomedir.mockReturnValue('/Users/testuser')
+  mockPlatform.mockReturnValue('darwin')
+
+  mockExistsSync.mockImplementation((p: string) => {
+    // Default: everything exists
+    return true
+  })
+
+  mockReadFileSync.mockImplementation((p: string) => {
+    if (p.includes('project.config.json')) {
+      return JSON.stringify({ appid: MOCK_APPID })
+    }
+    if (p.includes('miniprogramLog/log')) {
+      return SAMPLE_LOG_CONTENT
+    }
+    return ''
+  })
+
+  mockReaddirSync.mockImplementation((p: string) => {
+    // Order matters: most specific match first (miniprogramLog path also
+    // contains WeappFileSystem as a parent-path substring)
+    if (p.includes('miniprogramLog')) return ['log1', 'log2']
+    if (p.includes('WeappFileSystem')) return ['openid123']
+    if (p.endsWith('微信开发者工具')) return ['hash123']
+    return []
+  })
+
+  mockStatSync.mockReturnValue({ mtimeMs: Date.now(), size: 1024 } as any)
+}
+
+function makeSession(overrides: Partial<SessionState> = {}): SessionState {
+  return {
+    sessionId: 'test-session',
+    pages: [],
+    elements: new Map(),
+    outputDir: '/tmp/test-output',
+    createdAt: new Date(),
+    lastActivity: new Date(),
+    config: { projectPath: '/Users/testuser/projects/my-miniapp' },
+    logger: {
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+      debug: jest.fn(),
+      child: jest.fn().mockReturnThis(),
+    },
+    outputManager: {
+      getOutputDir: jest.fn().mockReturnValue('/tmp/test-output'),
+      generateFilename: jest.fn().mockReturnValue('screenshot-1.png'),
+      writeFile: jest.fn().mockResolvedValue('/tmp/test-output/screenshot-1.png'),
+      ensureOutputDir: jest.fn().mockResolvedValue(undefined),
+    },
+    ...overrides,
+  }
+}
+
 describe('MiniProgram Tools', () => {
   let mockSession: SessionState
 
@@ -300,7 +396,7 @@ describe('MiniProgram Tools', () => {
 
       const result = await miniprogramTools.screenshot(mockSession, {
         fullPage: true,
-      })
+      } as any)
 
       expect(result.success).toBe(true)
       expect(mockMiniProgram.screenshot).toHaveBeenCalledWith({
@@ -411,7 +507,7 @@ describe('MiniProgram Tools', () => {
       // Fire 8 screenshots concurrently
       const results = await Promise.all(
         Array.from({ length: 8 }, () =>
-          miniprogramTools.screenshot(mockSession, { returnBase64: true })
+          miniprogramTools.screenshot(mockSession, { returnBase64: true } as any)
         )
       )
 
@@ -442,12 +538,305 @@ describe('MiniProgram Tools', () => {
       }
 
       await Promise.all([
-        miniprogramTools.screenshot(mockSession, { returnBase64: true }),
+        miniprogramTools.screenshot(mockSession, { returnBase64: true } as any),
         miniprogramTools.evaluate(mockSession, { expression: '1+1' }),
       ])
 
       // screenshot and evaluate must not overlap on the shared WebSocket
       expect(maxInFlight).toBe(1)
+    })
+  })
+
+  describe('getLogs', () => {
+    beforeAll(async () => {
+      // The getLogs handler must be imported AFTER jest.mock calls are set up
+      const mod = await import('../../src/capabilities/miniprogram/handlers/logs.js')
+      getLogs = mod.getLogs
+    })
+
+    beforeEach(() => {
+      jest.clearAllMocks()
+      setupDefaultMocks()
+      // Pin Date.now() to match the sample log timestamps.
+      // Log timestamps have NO timezone → parsed as LOCAL time by parseLogTimestamp.
+      // The mocked value must also use LOCAL time so comparisons are consistent.
+      jest.spyOn(Date, 'now').mockReturnValue(
+        new Date('2026-06-16T11:57:00').getTime()
+      )
+    })
+
+    it('should throw error if projectPath not configured', async () => {
+      const session = makeSession({ config: undefined })
+
+      await expect(getLogs(session, {})).rejects.toThrow(
+        'Project path not configured'
+      )
+    })
+
+    it('should throw error if project.config.json missing', async () => {
+      const session = makeSession()
+      mockExistsSync.mockImplementation((p: string) => {
+        if (p.endsWith('project.config.json')) return false
+        return true
+      })
+
+      await expect(getLogs(session, {})).rejects.toThrow(
+        'project.config.json not found'
+      )
+    })
+
+    it('should throw error if appid not in project.config.json', async () => {
+      const session = makeSession()
+      mockReadFileSync.mockImplementation((p: string) => {
+        if (p.includes('project.config.json')) return JSON.stringify({})
+        return ''
+      })
+
+      await expect(getLogs(session, {})).rejects.toThrow(
+        'appid field not found'
+      )
+    })
+
+    it('should throw error if DevTools data dir not found', async () => {
+      const session = makeSession()
+      // Only project.config.json exists, but base dir doesn't
+      mockExistsSync.mockImplementation((p: string) => {
+        return p.endsWith('project.config.json')
+      })
+
+      await expect(getLogs(session, {})).rejects.toThrow(
+        'WeChat DevTools data directory not found'
+      )
+    })
+
+    it('should return logs with default filters (error, since=5m)', async () => {
+      const session = makeSession()
+      const result = await getLogs(session, {})
+
+      expect(result.success).toBe(true)
+      expect(result.appid).toBe(MOCK_APPID)
+      // Both error-level lines (normalized to lowercase)
+      expect(result.logs).toHaveLength(2)
+      // Most recent first
+      expect(result.logs[0].level).toBe('error')
+      expect(result.logs[0].message).toBe('Uncaught promise rejection')
+      expect(result.logs[1].level).toBe('error')
+      expect(result.logs[1].message).toBe('TypeError: Cannot read property of undefined')
+    })
+
+    it('should filter by single level', async () => {
+      const session = makeSession()
+      const result = await getLogs(session, { level: 'warn', since: '1d' })
+
+      expect(result.logs).toHaveLength(1)
+      expect(result.logs[0].level).toBe('warn')
+    })
+
+    it('should filter by level array', async () => {
+      const session = makeSession()
+      const result = await getLogs(session, {
+        level: ['warn', 'error'],
+        since: '1d',
+      })
+
+      expect(result.logs).toHaveLength(3) // 1 warn + 2 error
+    })
+
+    it('should filter by keyword (case-insensitive)', async () => {
+      const session = makeSession()
+      const result = await getLogs(session, {
+        level: undefined,
+        since: '1d',
+        keyword: 'TypeError',
+      })
+
+      expect(result.logs).toHaveLength(1)
+      expect(result.logs[0].message).toContain('TypeError')
+    })
+
+    it('should filter by keyword case-insensitively', async () => {
+      const session = makeSession()
+      const result = await getLogs(session, {
+        level: undefined,
+        since: '1d',
+        keyword: 'typeerror',
+      })
+
+      expect(result.logs).toHaveLength(1)
+    })
+
+    it('should filter by since with relative time (5m)', async () => {
+      const session = makeSession()
+      const result = await getLogs(session, {
+        level: undefined,
+        since: '5m',
+      })
+
+      // All sample lines should be within 5 minutes (they're dated "now")
+      expect(result.logs.length).toBeGreaterThan(0)
+    })
+
+    it('should filter by since with ISO timestamp', async () => {
+      const session = makeSession()
+      const result = await getLogs(session, {
+        level: undefined,
+        since: '2026-06-16T11:56:00.000Z',
+      })
+
+      // Only entries at or after 11:56
+      expect(result.logs.every((l) => l.timestamp >= '2026-6-16 11:56:')).toBe(true)
+    })
+
+    it('should filter by since with epoch ms', async () => {
+      const session = makeSession()
+      // Epoch for 2026-06-16T11:56:00 UTC
+      const epoch = Date.UTC(2026, 5, 16, 11, 56, 0)
+      const result = await getLogs(session, {
+        level: undefined,
+        since: String(epoch),
+      })
+
+      expect(result.logs.every((l) => l.timestamp >= '2026-6-16 11:56:')).toBe(true)
+    })
+
+    it('should filter by until', async () => {
+      const session = makeSession()
+      // Use epoch ms to avoid ISO parsing timezone ambiguity.
+      // untilMs = local 2026-06-16 11:55:30 → entries at 11:56:06 excluded
+      const untilMs = new Date(2026, 5, 16, 11, 55, 30).getTime()
+      const result = await getLogs(session, {
+        level: ['log', 'info', 'warn', 'error'],
+        since: String(new Date(2026, 5, 15).getTime()), // epoch for yesterday 00:00
+        until: String(untilMs),
+      })
+
+      // Entries before 11:55:30 = 3 log lines at 11:55:06
+      expect(result.logs).toHaveLength(3)
+      expect(result.logs.every((l) => l.timestamp.startsWith('2026-6-16 11:55:'))).toBe(true)
+    })
+
+    it('should respect limit parameter', async () => {
+      const session = makeSession()
+      const result = await getLogs(session, {
+        level: undefined,
+        since: '1d',
+        limit: 2,
+      })
+
+      expect(result.logs).toHaveLength(2)
+    })
+
+    it('should default to limit 200', async () => {
+      const session = makeSession()
+      const result = await getLogs(session, {
+        level: undefined,
+        since: '1d',
+      })
+
+      expect(result.logs.length).toBeLessThanOrEqual(200)
+    })
+
+    it('should return most recent logs first', async () => {
+      const session = makeSession()
+      const result = await getLogs(session, {
+        level: ['log', 'info', 'warn', 'error'],
+        since: '1d',
+      })
+
+      expect(result.logs).toHaveLength(5)
+      expect(result.logs[0].timestamp).toBe('2026-6-16 11:56:6')
+    })
+
+    it('should return file path and size', async () => {
+      const session = makeSession()
+      const result = await getLogs(session, {
+        level: undefined,
+        since: '1d',
+      })
+
+      expect(result.file).toContain('miniprogramLog/log1')
+      expect(result.fileSize).toBe(1024)
+    })
+
+    it('should skip unparseable lines gracefully', async () => {
+      const session = makeSession()
+      mockReadFileSync.mockImplementation((p: string) => {
+        if (p.includes('project.config.json')) {
+          return JSON.stringify({ appid: MOCK_APPID })
+        }
+        if (p.includes('miniprogramLog/log')) {
+          return [
+            'This is not a log line',
+            '',
+            '2026-6-16 11:56:6 [info] valid line',
+            'another garbage line',
+          ].join('\n')
+        }
+        return ''
+      })
+
+      const result = await getLogs(session, {
+        level: ['log', 'info', 'warn', 'error'],
+        since: '1d',
+      })
+
+      expect(result.logs).toHaveLength(1)
+      expect(result.logs[0].level).toBe('info')
+      expect(result.logs[0].message).toBe('valid line')
+    })
+
+    it('should select specific log file', async () => {
+      const session = makeSession()
+      const result = await getLogs(session, {
+        level: undefined,
+        since: '1d',
+        file: 'log2',
+      })
+
+      expect(result.file).toContain('log2')
+    })
+
+    it('should handle touristappid fallback', async () => {
+      const session = makeSession()
+      // Only touristappid directory exists, not mockAppid
+      mockExistsSync.mockImplementation((p: string) => {
+        if (p.endsWith('project.config.json')) return true
+        if (p.includes(MOCK_APPID)) return false
+        if (p.includes('touristappid/usr/miniprogramLog')) return true
+        if (p.includes('touristappid')) return true
+        if (p.endsWith('微信开发者工具')) return true
+        if (p.includes('WeappSimulator')) return true
+        if (p.includes('WeappFileSystem')) return true
+        if (p.includes('miniprogramLog')) return true
+        return false
+      })
+      mockReaddirSync.mockImplementation((p: string) => {
+        if (p.includes('miniprogramLog')) return ['log1']
+        if (p.includes('WeappFileSystem')) return ['openid123']
+        if (p.endsWith('微信开发者工具')) return ['hash123']
+        return []
+      })
+
+      const result = await getLogs(session, {
+        level: undefined,
+        since: '1d',
+      })
+
+      expect(result.success).toBe(true)
+    })
+
+    it('should throw if specified log file not found', async () => {
+      const session = makeSession()
+      mockReaddirSync.mockImplementation((p: string) => {
+        if (p.includes('miniprogramLog')) return ['log1'] // only log1, no log2
+        if (p.includes('WeappFileSystem')) return ['openid123']
+        if (p.endsWith('微信开发者工具')) return ['hash123']
+        return []
+      })
+
+      await expect(
+        getLogs(session, { level: undefined, since: '1d', file: 'log2' })
+      ).rejects.toThrow('Log file "log2" not found')
     })
   })
 })

@@ -83,7 +83,10 @@ export class SessionStore {
     let session = this.get(sessionId)
     if (!session) {
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
-      const outputDir = join(this.outputDir, `${sessionId}-${timestamp}`)
+      // Use <projectPath>/ai_tmp when available, otherwise fall back to .mcp-artifacts/session-xxx
+      const outputDir = config?.projectPath
+        ? join(config.projectPath, 'ai_tmp')
+        : join(this.outputDir, `${sessionId}-${timestamp}`)
       const now = new Date()
 
       session = {

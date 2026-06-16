@@ -59,7 +59,7 @@ describe('Capabilities System', () => {
         getSession: () => mockSession,
       })
 
-      expect(tools).toHaveLength(68) // All 68 tools
+      expect(tools).toHaveLength(69) // All 69 tools
       expect(mockServer.setRequestHandler).toHaveBeenCalled()
     })
 
@@ -70,7 +70,7 @@ describe('Capabilities System', () => {
         getSession: () => mockSession,
       })
 
-      expect(tools).toHaveLength(68) // All 68 tools
+      expect(tools).toHaveLength(69) // All 69 tools
     })
 
     it('should register only automator tools', async () => {
@@ -97,7 +97,7 @@ describe('Capabilities System', () => {
         getSession: () => mockSession,
       })
 
-      expect(tools).toHaveLength(9)
+      expect(tools).toHaveLength(10)
       expect(tools.map((t) => t.name)).toEqual([
         'miniprogram_navigate',
         'miniprogram_call_wx',
@@ -108,6 +108,7 @@ describe('Capabilities System', () => {
         'miniprogram_health',
         'miniprogram_native_confirm_modal',
         'miniprogram_native_cancel_modal',
+        'miniprogram_get_logs',
       ])
     })
 
@@ -212,7 +213,7 @@ describe('Capabilities System', () => {
         getSession: () => mockSession,
       })
 
-      expect(tools).toHaveLength(68) // All tools, no duplicates
+      expect(tools).toHaveLength(69) // All tools, no duplicates
     })
 
     it('should handle empty capabilities array', async () => {
@@ -269,8 +270,8 @@ describe('Capabilities System', () => {
         getSession: () => mockSession,
       })
 
-      // 4 + 9 + 8 + 23 + 9 + 3 + 6 + 6 = 68 tools
-      expect(tools).toHaveLength(68)
+      // 4 + 10 + 8 + 23 + 9 + 3 + 6 + 6 = 69 tools
+      expect(tools).toHaveLength(69)
     })
   })
 })
