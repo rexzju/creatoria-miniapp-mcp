@@ -11,3 +11,8 @@ export { screenshot, type ScreenshotArgs, type ScreenshotResult } from './screen
 export { getPageStack, type PageStackResult } from './page-stack.js'
 export { getSystemInfo, type SystemInfoResult } from './system-info.js'
 export { getHealth, type HealthResult } from './health.js'
+export {
+  confirmModal,
+  cancelModal,
+  type NativeModalResult,
+} from './native-modal.js'

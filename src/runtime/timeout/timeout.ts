@@ -71,6 +71,8 @@ export const DEFAULT_TIMEOUTS = {
   waitFor: 30000,
   /** Timeout for element queries (10 seconds) */
   query: 10000,
+  /** Timeout for native modal operations — clicking confirm/cancel on wx.showModal (5 seconds) */
+  nativeModal: 5000,
 } as const
 
 /**

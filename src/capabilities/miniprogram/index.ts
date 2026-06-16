@@ -14,6 +14,8 @@ import {
   pageStackSchema,
   systemInfoSchema,
   healthSchema,
+  confirmModalSchema,
+  cancelModalSchema,
 } from './schemas/index.js'
 import {
   navigate,
@@ -23,6 +25,8 @@ import {
   getPageStack,
   getSystemInfo,
   getHealth,
+  confirmModal,
+  cancelModal,
 } from './handlers/index.js'
 
 // Re-export schemas for external use
@@ -87,6 +91,22 @@ const tools: ToolDefinition[] = [
     inputSchema: healthSchema,
     handler: getHealth,
   },
+  {
+    name: 'miniprogram_native_confirm_modal',
+    description:
+      '点击微信原生模态弹窗（wx.showModal）的「确定」按钮。需要弹窗已显示（通常由前置操作触发），否则 DevTools 会拒绝请求。',
+    capability: 'miniprogram',
+    inputSchema: confirmModalSchema,
+    handler: confirmModal,
+  },
+  {
+    name: 'miniprogram_native_cancel_modal',
+    description:
+      '点击微信原生模态弹窗（wx.showModal）的「取消」按钮。需要弹窗已显示（通常由前置操作触发），否则 DevTools 会拒绝请求。',
+    capability: 'miniprogram',
+    inputSchema: cancelModalSchema,
+    handler: cancelModal,
+  },
 ]
 
 /**
@@ -94,7 +114,7 @@ const tools: ToolDefinition[] = [
  */
 export const capability: CapabilityModule = {
   name: 'miniprogram',
-  description: 'Mini program-level operations (7 tools)',
+  description: 'Mini program-level operations (9 tools)',
   tools,
 }
 
